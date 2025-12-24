@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Dict, List
+import uuid
 from src.utils import (
     sort_files, 
     is_valid_separator, 
@@ -117,26 +118,112 @@ def buil_rename_plan(
 
         index += 1
 
-        #rename_plan[item] = src / f"{new_name}{item.suffix}"
+        rename_plan[item] = src / f"{new_name}{item.suffix}"
 
-        #Para probar:
-        rename_plan[Path(item.stem)] = Path(new_name)
-
-    for k, v in rename_plan.items():
-        print(f"{k} -> {v}")
-    
-
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
-    print("\n")
- 
     return rename_plan
+
+def rename_run(plan: Dict[Path, Path]) -> None:
+    
+    """
+    Executes a safe, two-step bulk file rename operation.
+
+    The function renames each file from its original name to a unique temporary
+    name first, preventing name collisions, and then renames the temporary files
+    to their final target names as defined in the rename plan.
+
+    Args:
+        plan (Dict[Path, Path]): A dictionary mapping the current file paths
+            (old names) to their desired final file paths (new names).
+
+    Raises:
+        FileNotFoundError: If any file in the plan does not exist at the time of renaming.
+        PermissionError: If the process lacks permissions to rename one or more files.
+
+    Examples:
+        >>> plan = {
+        ...     Path("a.txt"): Path("hello_001.txt"),
+        ...     Path("b.txt"): Path("world_002.txt")
+        ... }
+        >>> rename_run(plan)
+        # Files are renamed safely using temporary UUID-based names first.
+    """
+
+    temp_map: Dict[Path, Path] = {}
+
+    for old, new in plan.items():
+        temp_name = old.with_name(f"{old.name}.{uuid.uuid4().hex}.tmp")
+        old.rename(temp_name)
+        temp_map[temp_name] = new
+
+    for old, new in temp_map.items():
+        old.rename(new)
+
+def reverse_rename_run(plan: Dict[Path, Path]) -> None:
+
+    """
+    Reverts a bulk file rename operation using a previously stored rename plan.
+
+    The function assumes that files were renamed according to the plan (old → new),
+    and performs the reverse operation (new → old) safely using a temporary rename
+    step first, to avoid collisions when restoring original names.
+
+    Args:
+        plan (Dict[Path, Path]): A dictionary mapping the original file paths
+            (before renaming) to the renamed file paths currently on disk.
+
+    Raises:
+        FileNotFoundError: If any renamed file path (plan values) does not exist.
+        PermissionError: If the process lacks permissions to rename one or more files.
+
+    Examples:
+        >>> plan = {
+        ...     Path("a.txt"): Path("hello_001.txt"),
+        ...     Path("b.txt"): Path("world_002.txt")
+        ... }
+        >>> reverse_rename_run(plan)
+        # Files are restored safely using a temporary UUID-based name first,
+        # then renamed back to their original names.
+    """
+
+    temp_map: Dict[Path, Path] = {}
+
+    for old, new in plan.items():
+        temp_name = new.with_name(f"{new.name}.{uuid.uuid4().hex}.tmp")
+        new.rename(temp_name)
+        temp_map[temp_name] = old
+
+    for old, new in temp_map.items():
+        old.rename(new)
+
+def dry_run_cli(plan: Dict[Path, Path]) -> None:
+
+    """
+    Simulate a renaming operation and print the planned changes to the console.
+
+    This function does not modify any files on disk. It is intended for use in
+    a command-line interface (CLI) to show the user what the renaming would look like
+    if executed.
+
+    Args:
+        plan (Dict[Path, Path]): A dictionary mapping original file paths (`Path`)
+            to their intended new file paths (`Path`).
+
+    Returns:
+        None: The function prints the planned renaming actions directly to the console.
+
+    Example:
+        >>> plan = {
+        ...     Path("file1.txt"): Path("file_001.txt"),
+        ...     Path("file2.txt"): Path("file_002.txt")
+        ... }
+        >>> dry_run_cli(plan)
+        file1.txt -> file_001.txt
+        file2.txt -> file_002.txt
+
+    Notes:
+        - This function is CLI-specific; for GUI or other interfaces, the returned
+          data should be handled differently.
+        - The function does not perform any filesystem operations.
+    """
+    for old, new in plan.items():
+        print(f"{old.name} -> {new.name}")
