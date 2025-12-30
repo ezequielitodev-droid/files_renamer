@@ -6,6 +6,93 @@ import os
 
 
 #Funciones de verificacion:
+def is_valid_order(order: str) -> bool:
+    
+    """
+    Verifies whether a given sorting order is supported by the CLI renamer.
+
+    This function checks if the provided order string matches one of the
+    predefined file sorting strategies. It is used to ensure that the renaming
+    process receives a valid criterion before building or executing a rename plan.
+
+    Args:
+        order (str): The sorting criterion to validate. Expected values include
+                     commonly supported file attributes or naming conventions.
+
+    Returns:
+        bool: True if the order is allowed ("name", "mtime", "ctime", "embedded"),
+              False otherwise.
+
+    Examples:
+        >>> in_valid_order("name")
+        True
+        >>> in_valid_order("mtime")
+        True
+        >>> in_valid_order("embedded")
+        True
+        >>> in_valid_order("size")
+        False
+        >>> in_valid_order("random")
+        False
+    """
+
+    valid_orders = ["name", "mtime", "ctime", "embedded"]
+
+    return order.lower() in valid_orders
+
+def is_valid_prefix(prefix: str) -> bool: 
+
+    """
+    Validates whether a given string is safe to be used as a file name prefix across platforms.
+
+    A prefix is considered valid if it does not contain forbidden file system characters,
+    does not start or end with spaces or dots, does not include control characters like
+    newlines or tabs, and is not a reserved system name commonly restricted by Windows
+    (e.g., CON, COM1, LPT9).
+
+    This validation ensures portability and prevents unexpected behavior in file systems,
+    shell commands, scripts, and automation workflows.
+
+    Args:
+        prefix (str): The prefix string to validate.
+
+    Returns:
+        bool: True if the prefix is safe and valid for use in file names, False otherwise.
+
+    Examples:
+        >>> is_valid_prefix("IMG")
+        True
+        >>> is_valid_prefix("backup_2025")
+        True
+        >>> is_valid_prefix(" .invalid")
+        False
+        >>> is_valid_prefix("bad/name")
+        False
+        >>> is_valid_prefix("COM3")
+        False
+    """
+
+    result = True
+
+    #1. No caracteres prohibidos:
+    forbidden_pattern = r"[\\\/:\*\?\"<>\|\$\&\%\@\!\`\;\'\(\)\{\}\[\]\^\~]"
+    if re.search(forbidden_pattern, prefix): result = False
+
+    #2. No empezar o terminar con espacio o punto:
+    if prefix.startswith(" ") or prefix.endswith(" ") or prefix.startswith(".") or prefix.endswith("."): result = False
+
+    #3. No saltos de lineas ni tabs:
+    if "\n" in prefix or "\t" in prefix: result = False
+
+    #4. No nombres reservados:
+    reserved_names = [
+        "CON", "PRN", "AUX", "NUL",
+        *[f"COM{i}" for i in range(1, 10)], 
+        *[f"LPT{i}" for i in range(1, 10)]
+    ]
+    if prefix.upper() in reserved_names: result = False
+
+    return result
 
 def is_valid_separator(character: str) -> bool:
 
@@ -167,6 +254,59 @@ def is_invalid_keep_no_number_combination(keep: bool, no_number: bool) -> bool:
     """
 
     return (not keep) and (no_number)
+
+def is_invalid_dry_run_reverse_run_combination(dry_run: bool, reverse_run: bool) -> bool:
+
+    """
+    Checks if both dry-run mode and reverse-run mode are enabled simultaneously, which is not allowed.
+
+    Since dry-run is intended for simulation only and reverse-run performs actual file system changes
+    based on a saved backup plan, enabling both at the same time creates a logical conflict in execution.
+
+    Args:
+        dry_run (bool): Indicates whether dry-run mode is active.
+        reverse_run (bool): Indicates whether reverse-run mode is active.
+
+    Returns:
+        bool: True if both modes are active, False otherwise.
+
+    Examples:
+        >>> is_invalid_dry_run_reverse_run_combination(True, False)
+        False
+        >>> is_invalid_dry_run_reverse_run_combination(False, True)
+        False
+        >>> is_invalid_dry_run_reverse_run_combination(True, True)
+        True
+    """
+
+    return (dry_run) and (reverse_run) 
+
+def is_invalid_run_reverse_with_extra_option(reverse_run: bool, extra_option_used: bool) -> bool:
+
+    """
+    Evaluates if reverse-run mode is being misused by detecting the presence of conflicting renaming options.
+
+    Reverse-run mode restores a previously saved rename plan and should not be combined with any
+    CLI flags that generate or modify a new renaming scheme. The function returns True only when
+    reverse-run is active AND extra renaming options were also provided, indicating invalid usage.
+
+    Args:
+        reverse_run (bool): True if reverse-run mode was invoked.
+        extra_option_used (bool): True if any additional renaming-related option was supplied in the CLI.
+
+    Returns:
+        bool: True when the combination is INVALID (reverse-run + extra options), False otherwise.
+
+    Examples:
+        >>> is_invalid_run_reverse_with_extra_option(True, False)
+        False
+        >>> is_invalid_run_reverse_with_extra_option(False, True)
+        False
+        >>> is_invalid_run_reverse_with_extra_option(True, True)
+        True
+    """
+
+    return (reverse_run) and (extra_option_used)
 
 
 #Funciones para el ordenamiento:

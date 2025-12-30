@@ -80,17 +80,18 @@ def buil_rename_plan(
     """
     
     if not src.exists() or not src.is_dir():
-        raise ValueError("Completame el codigo en ingles del error")
+        raise ValueError("Source path does not exist or is not a directory.")
     
-    if not is_valid_start_index(start): raise ValueError("Start index must be greater than 0")
+    #if not is_valid_start_index(start): raise ValueError("Start index must be greater than 0")
 
-    if not is_valid_padding(padding): raise ValueError("Padding must be zero or a positive integer")
+    #if not is_valid_padding(padding): raise ValueError("Padding must be zero or a positive integer")
 
-    if not is_valid_separator(separator): raise ValueError(f"Invalid separator: '{separator}'. Allowed characters are '_', '-', or '.'")
+    #if not is_valid_separator(separator): raise ValueError(f"Invalid separator: '{separator}'. Allowed characters are '_', '-', or '.'")
 
-    if not is_valid_case(case): raise ValueError(f"Invalid case: '{case}'. Allowed values are 'lower', 'upper', or 'title'")
+    #if not is_valid_case(case): raise ValueError(f"Invalid case: '{case}'. Allowed values are 'lower', 'upper', or 'title'")
 
-    if is_invalid_keep_no_number_combination(keep, no_number): raise ValueError("Cannot combine keep and no_number")
+    #
+    # if is_invalid_keep_no_number_combination(keep, no_number): raise ValueError("Cannot combine keep and no_number")
 
     #Creo una lista auxiliar para recorrer de manera correcta, ya que el sistema me recorre como se le canta:
     files: List[Path] = [p for p in Path.iterdir(src) if p.is_file()]
